@@ -34,3 +34,8 @@ The `.nojekyll` file disables Jekyll processing. Relative asset URLs support pro
 ## Public bundle
 
 Only `index.html`, `style.css`, `app.js`, `browser-data.js`, `web-mode.js`, this README, `.gitignore` and `.nojekyll` are published. The original Python app, local audit evidence, screenshots, catalog exports and skill packages are excluded.
+
+
+## Deployment address
+
+The GitHub Pages deployment target is https://dhruvrai-learner.github.io/Skill-Atlas/. The site opens with an empty local-import screen; no catalog is bundled.
