@@ -1,1 +1,36 @@
-# Skill-Atlas
+# Skill Atlas — browser edition
+
+A public interface for browsing a private, locally imported skill catalog. No catalog is included in this repository.
+
+The app uses HTML, CSS and JavaScript with no build step, CDN, analytics, runtime packages or backend. Imported JSON and manually selected SKILL.md text stay in memory in the current browser tab. Theme and shortlist IDs are saved in browser storage. Reloading clears the imported catalog.
+
+## Use it
+
+1. Start the original local Skill Atlas on the laptop that contains your skills.
+2. Export its catalog to a local file using PowerShell:
+
+```powershell
+Invoke-WebRequest -Uri 'http://127.0.0.1:8765/api/catalog' -OutFile "$env:USERPROFILE\Downloads\skill-atlas-catalog.json"
+```
+
+3. Open the deployed site and choose that JSON file. The browser reads it locally; the app does not upload it.
+
+On another device, transfer the catalog file privately and import it there. A catalog can contain local paths and audit details, so do not commit the export to this repository or share it publicly.
+
+## Capabilities and limits
+
+- Search, filters, shortlist, comparison, metadata and copyable reading instructions use the imported records.
+- Task suggestions use explicitly labeled browser lexical matching. This static edition does not run the original Python BM25 router.
+- Paths, availability, risk and compatibility labels are dated snapshot information, not live verification of the laptop.
+- Reading a SKILL.md requires an explicit local file selection. The selected file is displayed as inert text and is not verified against the imported Windows path. No skill code is executed.
+- The page's Content Security Policy disables JavaScript network connections. Initial static assets are served by GitHub Pages; GitHub's normal hosting privacy practices still apply.
+
+## GitHub Pages setup
+
+In the repository's **Settings → Pages**, choose **Deploy from a branch**, select **main** and **/(root)**, then **Save**. The files in this repository are already the deployable site; no custom workflow is needed.
+
+The `.nojekyll` file disables Jekyll processing. Relative asset URLs support project sites such as `/Skill-Atlas/`.
+
+## Public bundle
+
+Only `index.html`, `style.css`, `app.js`, `browser-data.js`, `web-mode.js`, this README, `.gitignore` and `.nojekyll` are published. The original Python app, local audit evidence, screenshots, catalog exports and skill packages are excluded.

@@ -1,0 +1,7 @@
+*.json
+*.jsonl
+*.py
+*.jpg
+*.png
+__pycache__/
+test_*.cjs
