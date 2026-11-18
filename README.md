@@ -6,6 +6,8 @@ The app uses HTML, CSS and JavaScript with no build step, CDN, analytics, runtim
 
 ## Use it
 
+Choose **Explore a sample** to try six illustrative records without a file. The sample is not an installed library or audit evidence, and its shortlist stays in memory. Choose **Change catalog** to return to the start.
+
 1. Start the original local Skill Atlas on the laptop that contains your skills.
 2. Export its catalog to a local file using PowerShell:
 
@@ -34,6 +36,16 @@ The `.nojekyll` file disables Jekyll processing. Relative asset URLs support pro
 ## Public bundle
 
 Only `index.html`, `style.css`, `app.js`, `browser-data.js`, `web-mode.js`, this README, `.gitignore` and `.nojekyll` are published. The original Python app, local audit evidence, screenshots, catalog exports and skill packages are excluded.
+
+## Preview locally
+
+Serve this folder with Python, then open `http://127.0.0.1:8877`:
+
+```powershell
+python -m http.server 8877 --bind 127.0.0.1
+```
+
+No install or build step is needed. This preview is separate from the laptop edition and its Python router.
 
 
 ## Deployment address

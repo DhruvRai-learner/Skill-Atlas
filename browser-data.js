@@ -165,6 +165,7 @@
       loaded_at: text(own(root, 'loaded_at', 'Date not supplied'), 'catalog date', 256),
       library: text(own(root, 'library', 'Imported catalog'), 'library label', 32768),
       router_available: false,
+      is_sample: boolean(own(root, 'is_sample', false), 'sample flag'),
       index_documents: count(own(root, 'index_documents', 0), 'index document count'),
       browser_edition: true
     };
@@ -226,10 +227,11 @@
 
   function createAdapter(options = {}) {
     let catalog = null;
+    let importing = false;
     let instanceIds = new Set();
     const waiting = new Set();
     function status() {
-      return {loaded: catalog !== null, skills: catalog?.skills.length || 0, instances: instanceIds.size, processing: 'browser memory only'};
+      return {loaded: catalog !== null, skills: catalog?.skills.length || 0, instances: instanceIds.size, is_sample: catalog?.is_sample || false, processing: 'browser memory only'};
     }
     function waitForCatalog(signal) {
       checkAbort(signal);
@@ -245,20 +247,24 @@
     }
     async function importFile(file) {
       if (catalog) throw new Error('Reload this page before importing a different catalog.');
-      if (!file || typeof file.text !== 'function' || !Number.isFinite(file.size) || file.size < 0 || file.size > MAX_CATALOG_BYTES) throw new Error('Choose a catalog JSON file no larger than 8 MB.');
-      const raw = await file.text();
-      if (typeof raw !== 'string' || new TextEncoder().encode(raw).byteLength > MAX_CATALOG_BYTES) throw new Error('The catalog exceeds the 8 MB limit.');
-      let parsed;
-      try { parsed = JSON.parse(raw.replace(/^\uFEFF/, '')); }
-      catch { throw new Error('Choose a valid Skill Atlas catalog JSON file.'); }
-      const normalized = normalizeCatalog(parsed);
-      catalog = normalized;
-      instanceIds = new Set(catalog.skills.flatMap(skill => skill.instances.map(instance => instance.id)));
-      for (const waiter of [...waiting]) waiter.resolve(catalog);
-      const summary = status();
-      options.onCatalogReady?.(summary);
-      if (typeof globalThis.dispatchEvent === 'function' && typeof CustomEvent === 'function') globalThis.dispatchEvent(new CustomEvent('catalog-ready', {detail: summary}));
-      return summary;
+      if (importing) throw new Error('A catalog is already being read. Wait for it to finish.');
+      importing = true;
+      try {
+        if (!file || typeof file.text !== 'function' || !Number.isFinite(file.size) || file.size < 0 || file.size > MAX_CATALOG_BYTES) throw new Error('Choose a catalog JSON file no larger than 8 MB.');
+        const raw = await file.text();
+        if (typeof raw !== 'string' || new TextEncoder().encode(raw).byteLength > MAX_CATALOG_BYTES) throw new Error('The catalog exceeds the 8 MB limit.');
+        let parsed;
+        try { parsed = JSON.parse(raw.replace(/^\uFEFF/, '')); }
+        catch { throw new Error('Choose a valid Skill Atlas catalog JSON file.'); }
+        const normalized = normalizeCatalog(parsed);
+        catalog = normalized;
+        instanceIds = new Set(catalog.skills.flatMap(skill => skill.instances.map(instance => instance.id)));
+        for (const waiter of [...waiting]) waiter.resolve(catalog);
+        const summary = status();
+        options.onCatalogReady?.(summary);
+        if (typeof globalThis.dispatchEvent === 'function' && typeof CustomEvent === 'function') globalThis.dispatchEvent(new CustomEvent('catalog-ready', {detail: summary}));
+        return summary;
+      } finally { importing = false; }
     }
     async function request(path, {signal} = {}) {
       checkAbort(signal);
@@ -295,14 +301,19 @@
         if (error) { error.textContent = ''; error.hidden = true; }
         if (progress) progress.textContent = 'Reading the catalog on this device…';
         input.disabled = true;
+        const buttons = ['importOpen', 'demoOpen'].map(id => document.getElementById(id)).filter(Boolean);
+        for (const button of buttons) button.disabled = true;
         try {
           const summary = await importFile(file);
           if (progress) progress.textContent = summary.skills + ' skill names and ' + summary.instances + ' source records loaded. Your file stays in this browser tab.';
         } catch (failure) {
-          if (error) { error.textContent = failure.message; error.hidden = false; }
+          if (error) { error.textContent = failure.message.startsWith('Invalid catalog:') ? 'This file is not a supported Skill Atlas catalog. Choose the JSON export from your laptop, or explore the sample.' : failure.message; error.hidden = false; }
           if (progress) progress.textContent = 'Nothing was imported. Choose another catalog file.';
           input.value = '';
-        } finally { input.disabled = false; }
+        } finally {
+          input.disabled = false;
+          for (const button of buttons) button.disabled = false;
+        }
       });
     }
     return Object.freeze({request, importFile, status, bindImportControls});
