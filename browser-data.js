@@ -166,6 +166,7 @@
       library: text(own(root, 'library', 'Imported catalog'), 'library label', 32768),
       router_available: false,
       is_sample: boolean(own(root, 'is_sample', false), 'sample flag'),
+      is_bundled: boolean(own(root, 'is_bundled', false), 'bundled flag'),
       index_documents: count(own(root, 'index_documents', 0), 'index document count'),
       browser_edition: true
     };
@@ -231,7 +232,7 @@
     let instanceIds = new Set();
     const waiting = new Set();
     function status() {
-      return {loaded: catalog !== null, skills: catalog?.skills.length || 0, instances: instanceIds.size, is_sample: catalog?.is_sample || false, processing: 'browser memory only'};
+      return {loaded: catalog !== null, skills: catalog?.skills.length || 0, instances: instanceIds.size, is_sample: catalog?.is_sample || false, is_bundled: catalog?.is_bundled || false, processing: 'browser memory only'};
     }
     function waitForCatalog(signal) {
       checkAbort(signal);

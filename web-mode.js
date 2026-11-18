@@ -1,75 +1,88 @@
 'use strict';
 
-// Authored examples, not copied packages or evidence from a real laptop.
-function sampleCatalog() {
-    const examples = [
-        ['interface-review', 'Interface review', 'Check UI for clarity, usability, and consistency.', 'design', 'LOW', ['accessibility', 'ui review']],
-        ['api-design', 'API design', 'Plan clear, consistent APIs and useful error responses.', 'engineering', 'LOW', ['backend', 'API']],
-        ['test-planning', 'Test planning', 'Create a focused test plan for key scenarios and edge cases.', 'quality', 'LOW', ['testing', 'QA']],
-        ['research-notes', 'Research notes', 'Turn source material into clear, traceable research notes.', 'research', 'LOW', ['sources', 'summary']],
-        ['release-review', 'Release review', 'Review deployment readiness, dependencies, and rollback plans.', 'engineering', 'MODERATE', ['deployment', 'release']],
-        ['content-editing', 'Content editing', 'Edit writing for structure, plain language, and readability.', 'writing', 'LOW', ['copy', 'editing']]
-    ];
-    return {
-        is_sample: true, library: 'Illustrative sample library', loaded_at: 'Sample data',
-        skills: examples.map(([id, name, description, domain, risk, aliases]) => ({
-            id: 'sample-' + id, name, description, aliases, domains: [domain], risk,
-            agents: ['openai_codex', 'claude_code', 'gemini_cli'], status: 'Single',
-            instances: [{
-                id: 'sample-source-' + id, name, path: 'Sample only; no local path',
-                provenance: 'Illustrative sample; not installed', source: 'Sample data', host: 'sample',
-                available: true, observed_state: 'Illustrative record; not a real package',
-                security: {risk_level: risk}, validation: {}, taxonomy: {},
-                package_verification: 'NOT_CHECKED', evidence_date: 'Not assessed - sample data'
-            }]
-        }))
-    };
+function catalogLocation(privateImport) {
+    const url = new URL(location.href || 'https://skill-atlas.invalid/');
+    if (privateImport) url.searchParams.set('catalog', 'private');
+    else url.searchParams.delete('catalog');
+    url.hash = '';
+    return url.toString();
+}
+
+function topAction(label) {
+    const action = document.getElementById('startOver');
+    const text = [...action.children].find(child => child.tagName === 'SPAN');
+    if (text) text.textContent = label;
+    action.setAttribute('aria-label', label);
+}
+
+function importFailure(message) {
+    const error = document.getElementById('importError');
+    error.textContent = message;
+    error.hidden = false;
+    document.getElementById('importStatus').textContent = '';
 }
 
 window.addEventListener('catalog-ready', event => {
-    const sample = event.detail?.is_sample === true;
+    const bundled = event.detail?.is_bundled === true;
     document.getElementById('importGate').hidden = true;
     document.getElementById('webWorkspace').hidden = false;
     document.getElementById('evidenceBtn').disabled = false;
     document.getElementById('evidenceBtn').hidden = false;
     document.getElementById('startOver').hidden = false;
+    topAction(bundled ? 'Open private catalog' : 'Browse included skills');
+    const privacy = document.getElementById('privacyLabel');
+    if (privacy) privacy.textContent = bundled ? 'On-device search' : 'Local & private';
     const banner = document.getElementById('snapshotNotice');
-    banner.textContent = sample
-        ? 'Sample library. All skills, agent labels, and risk levels below are illustrative. Nothing is installed.'
-        : 'Private catalog loaded. Evidence describes your imported snapshot; this website cannot check your laptop.';
+    banner.textContent = bundled
+        ? 'The included catalog lists '+event.detail.skills+' inventoried skill names and '+event.detail.instances+' copies. Local paths, raw audit records, instructions, and scripts stay private. Compatibility, risk and validation labels are dated records, not proof of activation or safety. Import your private catalog for exact paths and full evidence.'
+        : 'Private catalog loaded in this tab. Nothing is uploaded. This website cannot check your laptop folders; evidence describes the imported snapshot.';
     banner.hidden = false;
     const label = document.getElementById('snapshotLabel');
-    if (label) label.textContent = sample ? 'Sample data · not installed' : 'About this catalog';
+    if (label) label.textContent = bundled ? 'Included catalog · paths kept private' : 'About this private snapshot';
     const title = document.getElementById('workspaceTitle');
     if (title) {
-        title.textContent = sample ? 'Sample library' : 'Your skill library';
-        title.focus({preventScroll: true});
-        window.scrollTo?.(0, 0);
+        title.textContent = bundled ? 'Your skill library' : 'Your private library';
+        title.focus({preventScroll:true});
+        window.scrollTo?.(0,0);
     }
 });
 
-document.getElementById('startOver').addEventListener('click', () => location.reload());
+document.getElementById('startOver').addEventListener('click', () => {
+    const bundled = SkillAtlasData.status().is_bundled;
+    location.href = catalogLocation(bundled);
+});
 document.getElementById('importOpen')?.addEventListener('click', () => document.getElementById('catalogFile').click());
-document.getElementById('demoOpen')?.addEventListener('click', async () => {
-    const buttons = ['demoOpen', 'importOpen', 'catalogFile'].map(id => document.getElementById(id)).filter(Boolean);
-    for (const button of buttons) button.disabled = true;
-    const error = document.getElementById('importError');
-    error.hidden = true;
-    const progress = document.getElementById('importStatus');
-    progress.textContent = 'Opening the sample library...';
-    try {
-        const raw = JSON.stringify(sampleCatalog());
-        await SkillAtlasData.importFile({name: 'sample.json', size: new TextEncoder().encode(raw).byteLength, text: async () => raw});
-    } catch {
-        error.textContent = 'The sample could not open. Try again or choose your own catalog.';
-        error.hidden = false;
-        progress.textContent = '';
-    } finally {
-        for (const button of buttons) button.disabled = false;
-    }
+document.getElementById('demoOpen')?.addEventListener('click', () => {
+    location.href = catalogLocation(false);
 });
 
-// The router explanation follows mode changes in the shared viewer.
+async function openIncludedCatalog() {
+    if (new URL(location.href || 'https://skill-atlas.invalid/').searchParams.get('catalog') === 'private') {
+        const start = document.getElementById('startOver');
+        start.hidden = false;
+        topAction('Browse included skills');
+        return;
+    }
+    if (!window.SkillAtlasBundledCatalog) {
+        importFailure('The included catalog could not load. Refresh the page, or open your private catalog below.');
+        return;
+    }
+    const controls = ['demoOpen','importOpen','catalogFile'].map(id=>document.getElementById(id)).filter(Boolean);
+    for (const control of controls) control.disabled = true;
+    document.getElementById('importStatus').textContent = 'Opening your skill library…';
+    try {
+        const raw = JSON.stringify(window.SkillAtlasBundledCatalog);
+        await SkillAtlasData.importFile({name:'included-catalog.json',size:new TextEncoder().encode(raw).byteLength,text:async()=>raw});
+    } catch {
+        importFailure('The included catalog could not open. Refresh the page or choose a private catalog to continue.');
+    } finally {
+        for (const control of controls) control.disabled = false;
+    }
+}
+
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', openIncludedCatalog, {once:true});
+else queueMicrotask(openIncludedCatalog);
+
 document.getElementById('routeMode').addEventListener('click', () => {
     queueMicrotask(() => {
         document.getElementById('searchHelp').textContent = 'Word matching in this browser. Unknown risk, changed packages, and unknown agent compatibility are excluded.';
